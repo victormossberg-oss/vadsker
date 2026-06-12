@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { NewsItem, NewsResult } from "@/lib/rss";
+import { ALL_CATEGORIES } from "@/lib/categories";
 
 function relativeTime(ts: number | null): string {
   if (!ts) return "";
@@ -32,6 +33,7 @@ export default function NewsFeed({ initial }: { initial: NewsResult }) {
   const [data, setData] = useState<NewsResult>(initial);
   const [refreshing, setRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [category, setCategory] = useState<string>("all");
 
   async function refresh() {
     setRefreshing(true);
@@ -54,10 +56,24 @@ export default function NewsFeed({ initial }: { initial: NewsResult }) {
     return () => clearInterval(t);
   }, []);
 
+  // Visa bara filter för kategorier som faktiskt har nyheter just nu.
+  const availableCategories = useMemo(() => {
+    const present = new Set(data.items.map((i) => i.category));
+    return ALL_CATEGORIES.filter((c) => present.has(c.id));
+  }, [data.items]);
+
   // Nyheterna kommer redan sorterade nyast först från servern.
-  const items: NewsItem[] = data.items;
+  const items: NewsItem[] =
+    category === "all"
+      ? data.items
+      : data.items.filter((i) => i.category === category);
   const shown = items.slice(0, visibleCount);
   const hasMore = visibleCount < items.length;
+
+  function selectCategory(id: string) {
+    setCategory(id);
+    setVisibleCount(PAGE_SIZE); // börja om från toppen vid filterbyte
+  }
 
   const [lead, ...rest] = shown;
 
@@ -69,6 +85,26 @@ export default function NewsFeed({ initial }: { initial: NewsResult }) {
           {refreshing ? "Uppdaterar…" : "↻ Uppdatera"}
         </button>
       </div>
+
+      {availableCategories.length > 1 && (
+        <div className="filters" role="group" aria-label="Filtrera på kategori">
+          <button
+            className={`chip${category === "all" ? " chip--active" : ""}`}
+            onClick={() => selectCategory("all")}
+          >
+            Alla
+          </button>
+          {availableCategories.map((c) => (
+            <button
+              key={c.id}
+              className={`chip${category === c.id ? " chip--active" : ""}`}
+              onClick={() => selectCategory(c.id)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {data.failedSources.length > 0 && (
         <p className="notice">

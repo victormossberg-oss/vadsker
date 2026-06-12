@@ -1,5 +1,6 @@
 import Parser from "rss-parser";
 import { SOURCES, type Source } from "./sources";
+import { categorize } from "./categories";
 
 export type NewsItem = {
   id: string;
@@ -11,6 +12,7 @@ export type NewsItem = {
   sourceName: string;
   sourceLabel: string;
   sourceColor: string;
+  category: string; // kategori-id, se lib/categories.ts
   publishedAt: number | null; // epoch ms
 };
 
@@ -95,16 +97,19 @@ async function fetchSource(source: Source): Promise<NewsItem[]> {
   const feed = await parser.parseString(xml);
   return (feed.items || []).map((item, idx) => {
     const link = item.link || "";
+    const title = stripHtml(item.title) || "(utan rubrik)";
+    const summary = stripHtml(item.contentSnippet || item.content).slice(0, 280);
     return {
       id: `${source.id}:${item.guid || link || idx}`,
-      title: stripHtml(item.title) || "(utan rubrik)",
-      summary: stripHtml(item.contentSnippet || item.content).slice(0, 280),
+      title,
+      summary,
       link,
       imageUrl: extractImage(item as RawItem),
       sourceId: source.id,
       sourceName: source.name,
       sourceLabel: source.label,
       sourceColor: source.color,
+      category: categorize(title, summary),
       publishedAt: parseDate(item),
     };
   });
