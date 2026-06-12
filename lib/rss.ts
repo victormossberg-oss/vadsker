@@ -22,8 +22,6 @@ export type NewsResult = {
 };
 
 const parser = new Parser({
-  timeout: 8000,
-  headers: { "User-Agent": "Vadsker/0.1 (news aggregator)" },
   customFields: {
     item: [
       ["media:content", "mediaContent", { keepArray: true }],
@@ -31,6 +29,9 @@ const parser = new Parser({
     ],
   },
 });
+
+// Hur länge varje RSS-svar får cachas (delad, persistent Next.js Data Cache).
+const CACHE_TTL_SECONDS = 5 * 60; // 5 minuter
 
 type RawItem = {
   enclosure?: { url?: string; type?: string };
@@ -59,11 +60,6 @@ function extractImage(item: RawItem): string | null {
   return m ? m[1] : null;
 }
 
-// Enkel in-memory-cache så vi inte spammar källorna.
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minuter
-let cache: { data: NewsResult; expires: number } | null = null;
-let inFlight: Promise<NewsResult> | null = null;
-
 function stripHtml(input: string | undefined): string {
   if (!input) return "";
   return input
@@ -86,7 +82,17 @@ function parseDate(item: { isoDate?: string; pubDate?: string }): number | null 
 }
 
 async function fetchSource(source: Source): Promise<NewsItem[]> {
-  const feed = await parser.parseURL(source.feedUrl);
+  // Hämta via fetch så svaret hamnar i Next.js Data Cache. Den är persistent
+  // och delas mellan alla serverless-anrop på Vercel – till skillnad från en
+  // minnescache som nollställs vid varje cold start.
+  const res = await fetch(source.feedUrl, {
+    headers: { "User-Agent": "Vadsker/0.1 (news aggregator)" },
+    signal: AbortSignal.timeout(8000),
+    next: { revalidate: CACHE_TTL_SECONDS },
+  });
+  if (!res.ok) throw new Error(`${source.name}: HTTP ${res.status}`);
+  const xml = await res.text();
+  const feed = await parser.parseString(xml);
   return (feed.items || []).map((item, idx) => {
     const link = item.link || "";
     return {
@@ -156,19 +162,7 @@ async function aggregate(): Promise<NewsResult> {
   return { items, fetchedAt: Date.now(), failedSources };
 }
 
-export async function getNews(force = false): Promise<NewsResult> {
-  const now = Date.now();
-  if (!force && cache && cache.expires > now) return cache.data;
-  if (inFlight) return inFlight;
-
-  inFlight = aggregate()
-    .then((data) => {
-      cache = { data, expires: Date.now() + CACHE_TTL_MS };
-      return data;
-    })
-    .finally(() => {
-      inFlight = null;
-    });
-
-  return inFlight;
+export async function getNews(): Promise<NewsResult> {
+  // Cachen sköts nu per RSS-hämtning av Next.js Data Cache (se fetchSource).
+  return aggregate();
 }
