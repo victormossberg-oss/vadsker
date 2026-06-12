@@ -25,7 +25,7 @@ export default async function Home() {
         <h1>
           Vad<span className="accent">sker</span>
         </h1>
-        <p className="tagline">Topnyheter från svenska medier – på en sida.</p>
+        <p className="tagline">Senaste nytt från svenska medier – på en sida.</p>
       </header>
 
       <NewsFeed initial={initial} />
