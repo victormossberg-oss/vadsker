@@ -18,9 +18,9 @@ const sans = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "Vadsker – topnyheter från svenska medier",
+  title: "Vadsker – alla senaste nyheter samlade",
   description:
-    "Samlade topnyheter från Aftonbladet, Expressen, DN, SvD, DI, SVT med flera – på en sida.",
+    "Samlade nyheter från Aftonbladet, Expressen, DN, SvD, DI, SVT med flera – på en sida.",
 };
 
 export default function RootLayout({
