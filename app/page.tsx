@@ -43,6 +43,10 @@ export default async function Home() {
           respektive upphovsrättsinnehavare. Klicka på en nyhet för att läsa
           hela artikeln hos källan.
         </p>
+        <p className="footer__contact">
+          Kontakt:{" "}
+          <a href="mailto:vadsker.nyheter@gmail.com">vadsker.nyheter@gmail.com</a>
+        </p>
         <p className="footer__copyright">
           © {new Date().getFullYear()} Vadsker · Ej affilierad med ovanstående
           medier.

@@ -341,6 +341,22 @@ body {
   margin: 0 auto 16px;
 }
 
+.footer__contact {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.footer__contact a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer__contact a:hover {
+  text-decoration: underline;
+}
+
 .footer__copyright {
   font-size: 12px;
   color: var(--muted);
