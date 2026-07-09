@@ -26,6 +26,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+:where(a, button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .container {
   max-width: 720px;
   margin: 0 auto;
@@ -75,9 +80,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
   margin-bottom: 8px;
+}
+
+.toolbar__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .count {
@@ -87,6 +99,12 @@ body {
   text-transform: uppercase;
   letter-spacing: 1.5px;
   color: var(--accent);
+}
+
+.updated {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .refresh {

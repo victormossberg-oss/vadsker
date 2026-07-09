@@ -3,8 +3,18 @@
 // så vi härleder en egen gemensam taxonomi med nyckelord i stället.
 // Lägg gärna till fler ord – ordningen i CATEGORIES avgör prioritet vid träff.
 
+export type CategoryId =
+  | "sport"
+  | "ekonomi"
+  | "politik"
+  | "noje"
+  | "teknik"
+  | "ovrigt";
+
+type DefinedCategoryId = Exclude<CategoryId, "ovrigt">;
+
 export type Category = {
-  id: string;
+  id: DefinedCategoryId;
   label: string;
   // Ord som klassar en nyhet till kategorin (matchas som hela ord, skiftlägesokänsligt)
   keywords: string[];
@@ -65,31 +75,33 @@ export const CATEGORIES: Category[] = [
   },
 ];
 
-const FALLBACK_ID = "ovrigt";
+const FALLBACK_ID: CategoryId = "ovrigt";
 const FALLBACK_LABEL = "Övrigt";
 
 // Alla kategorier inkl. fallback – används för att rendera filtren.
-export const ALL_CATEGORIES: { id: string; label: string }[] = [
+export const ALL_CATEGORIES: { id: CategoryId; label: string }[] = [
   ...CATEGORIES.map((c) => ({ id: c.id, label: c.label })),
   { id: FALLBACK_ID, label: FALLBACK_LABEL },
 ];
 
 // Förkompilera ett ord-regex per nyckelord. Lookbehind/lookahead ger
 // ordgräns som även respekterar svenska tecken (å, ä, ö).
-const COMPILED: { id: string; res: RegExp[] }[] = CATEGORIES.map((c) => ({
-  id: c.id,
-  res: c.keywords.map(
-    (kw) =>
-      new RegExp(`(?<![a-zåäöéèü])${escapeRegExp(kw)}(?![a-zåäöéèü])`, "i")
-  ),
-}));
+const COMPILED: { id: DefinedCategoryId; res: RegExp[] }[] = CATEGORIES.map(
+  (c) => ({
+    id: c.id,
+    res: c.keywords.map(
+      (kw) =>
+        new RegExp(`(?<![a-zåäöéèü])${escapeRegExp(kw)}(?![a-zåäöéèü])`, "i")
+    ),
+  })
+);
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // Returnerar kategori-id för en nyhet. Första kategorin med en träff vinner.
-export function categorize(title: string, summary: string): string {
+export function categorize(title: string, summary: string): CategoryId {
   const haystack = `${title} ${summary}`;
   for (const cat of COMPILED) {
     if (cat.res.some((re) => re.test(haystack))) return cat.id;

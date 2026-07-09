@@ -48,13 +48,6 @@ export const SOURCES: Source[] = [
     color: "#e8830c",
     feedUrl: "https://www.di.se/rss",
   },
-  {
-    id: "svt",
-    name: "SVT Nyheter",
-    label: "SVT",
-    color: "#1ea54c",
-    feedUrl: "https://www.svt.se/nyheter/rss.xml",
-  },
 ];
 
 export const SOURCE_BY_ID = new Map(SOURCES.map((s) => [s.id, s]));

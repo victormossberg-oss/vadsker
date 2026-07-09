@@ -1,6 +1,6 @@
 import Parser from "rss-parser";
 import { SOURCES, type Source } from "./sources";
-import { categorize } from "./categories";
+import { categorize, type CategoryId } from "./categories";
 
 export type NewsItem = {
   id: string;
@@ -12,7 +12,7 @@ export type NewsItem = {
   sourceName: string;
   sourceLabel: string;
   sourceColor: string;
-  category: string; // kategori-id, se lib/categories.ts
+  category: CategoryId; // kategori-id, se lib/categories.ts
   publishedAt: number | null; // epoch ms
 };
 
@@ -159,6 +159,9 @@ async function aggregate(): Promise<NewsResult> {
       failedSources.push(SOURCES[i].name);
     }
   });
+
+  // Artiklar utan länk går inte att läsa vidare från, så visa dem inte.
+  items = items.filter((item) => item.link);
 
   // Sortera nyast först (saknad tid hamnar sist)
   items.sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
