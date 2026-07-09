@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Vadsker">
+  <rect width="512" height="512" rx="96" fill="#ffffff"/>
+  <rect x="368" y="96" width="48" height="320" rx="24" fill="#c8102e"/>
+  <path fill="#16161a" d="M94 128h72l91 236 91-236h70L288 416h-64L94 128Z"/>
+  <path fill="#c8102e" d="M342 128h76L286 416h-62l41-88 77-200Z"/>
+</svg>
