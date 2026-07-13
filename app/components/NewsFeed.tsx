@@ -20,6 +20,7 @@ function relativeTime(ts: number | null, now: number): string {
 
 function Kicker({ item, now }: { item: NewsItem; now: number }) {
   const time = relativeTime(item.publishedAt, now);
+  const sourceCount = 1 + item.related.length;
 
   return (
     <div className="kicker">
@@ -27,6 +28,36 @@ function Kicker({ item, now }: { item: NewsItem; now: number }) {
         {item.sourceName}
       </span>
       {time && <span className="kicker__time">{time}</span>}
+      {item.related.length > 0 && (
+        <span className="kicker__coverage">{sourceCount} källor</span>
+      )}
+    </div>
+  );
+}
+
+function CoverageLinks({ related }: { related: NewsItem["related"] }) {
+  if (related.length === 0) return null;
+
+  return (
+    <div className="coverage" aria-label="Andra källor för samma nyhet">
+      <span className="coverage__label">Finns även på</span>
+      {related.map((item) => (
+        <a
+          key={item.id}
+          className="coverage__link"
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Läs hos ${item.sourceName}: ${item.title}`}
+        >
+          <span
+            className="coverage__source"
+            style={{ color: item.sourceColor }}
+          >
+            {item.sourceName}
+          </span>
+        </a>
+      ))}
     </div>
   );
 }
@@ -79,22 +110,6 @@ export default function NewsFeed({ initial }: { initial: NewsResult }) {
     [data.items]
   );
 
-  // Visa bara filter för kategorier som faktiskt har nyheter just nu.
-  const availableCategories = useMemo(() => {
-    const present = new Set(readableItems.map((i) => i.category));
-    return ALL_CATEGORIES.filter((c) => present.has(c.id));
-  }, [readableItems]);
-
-  useEffect(() => {
-    if (
-      category !== "all" &&
-      !availableCategories.some((c) => c.id === category)
-    ) {
-      setCategory("all");
-      setVisibleCount(PAGE_SIZE);
-    }
-  }, [availableCategories, category]);
-
   // Nyheterna kommer redan sorterade nyast först från servern.
   const items: NewsItem[] =
     category === "all"
@@ -130,29 +145,27 @@ export default function NewsFeed({ initial }: { initial: NewsResult }) {
         </button>
       </div>
 
-      {availableCategories.length > 1 && (
-        <div className="filters" role="group" aria-label="Filtrera på kategori">
+      <div className="filters" role="group" aria-label="Filtrera på kategori">
+        <button
+          type="button"
+          className={`chip${category === "all" ? " chip--active" : ""}`}
+          onClick={() => selectCategory("all")}
+          aria-pressed={category === "all"}
+        >
+          Alla
+        </button>
+        {ALL_CATEGORIES.map((c) => (
           <button
+            key={c.id}
             type="button"
-            className={`chip${category === "all" ? " chip--active" : ""}`}
-            onClick={() => selectCategory("all")}
-            aria-pressed={category === "all"}
+            className={`chip${category === c.id ? " chip--active" : ""}`}
+            onClick={() => selectCategory(c.id)}
+            aria-pressed={category === c.id}
           >
-            Alla
+            {c.label}
           </button>
-          {availableCategories.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={`chip${category === c.id ? " chip--active" : ""}`}
-              onClick={() => selectCategory(c.id)}
-              aria-pressed={category === c.id}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
 
       {refreshError && (
         <p className="notice" role="status">
@@ -167,55 +180,66 @@ export default function NewsFeed({ initial }: { initial: NewsResult }) {
       )}
 
       {lead && (
-        <a
-          className="lead"
-          href={lead.link}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {lead.imageUrl && (
-            <div className="lead__media">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={lead.imageUrl}
-                alt=""
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-              />
+        <article className="lead">
+          <a
+            className="lead__main"
+            href={lead.link}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {lead.imageUrl && (
+              <div className="lead__media">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lead.imageUrl}
+                  alt=""
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </div>
+            )}
+            <div className="lead__body">
+              <Kicker item={lead} now={now} />
+              <h2 className="lead__title">{lead.title}</h2>
+              {lead.summary && <p className="lead__summary">{lead.summary}</p>}
             </div>
-          )}
-          <div className="lead__body">
-            <Kicker item={lead} now={now} />
-            <h2 className="lead__title">{lead.title}</h2>
-            {lead.summary && <p className="lead__summary">{lead.summary}</p>}
-          </div>
-        </a>
+          </a>
+          <CoverageLinks related={lead.related} />
+        </article>
       )}
 
       <ul className="feed">
         {rest.map((item) => (
           <li key={item.id} className="story">
-            <a href={item.link} target="_blank" rel="noopener noreferrer">
-              {item.imageUrl && (
-                <div className="story__media">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              )}
-              <div className="story__body">
-                <Kicker item={item} now={now} />
-                <h3 className="story__title">{item.title}</h3>
-                {item.summary && (
-                  <p className="story__summary">{item.summary}</p>
+            <article className="story__article">
+              <a
+                className="story__main"
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {item.imageUrl && (
+                  <div className="story__media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
                 )}
-              </div>
-            </a>
+                <div className="story__body">
+                  <Kicker item={item} now={now} />
+                  <h3 className="story__title">{item.title}</h3>
+                  {item.summary && (
+                    <p className="story__summary">{item.summary}</p>
+                  )}
+                </div>
+              </a>
+              <CoverageLinks related={item.related} />
+            </article>
           </li>
         ))}
       </ul>

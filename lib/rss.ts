@@ -2,18 +2,22 @@ import Parser from "rss-parser";
 import { SOURCES, type Source } from "./sources";
 import { categorize, type CategoryId } from "./categories";
 
-export type NewsItem = {
+export type RelatedNewsItem = {
   id: string;
   title: string;
-  summary: string;
   link: string;
-  imageUrl: string | null;
   sourceId: string;
   sourceName: string;
   sourceLabel: string;
   sourceColor: string;
-  category: CategoryId; // kategori-id, se lib/categories.ts
   publishedAt: number | null; // epoch ms
+};
+
+export type NewsItem = RelatedNewsItem & {
+  summary: string;
+  imageUrl: string | null;
+  category: CategoryId; // kategori-id, se lib/categories.ts
+  related: RelatedNewsItem[];
 };
 
 export type NewsResult = {
@@ -111,6 +115,7 @@ async function fetchSource(source: Source): Promise<NewsItem[]> {
       sourceColor: source.color,
       category: categorize(title, summary),
       publishedAt: parseDate(item),
+      related: [],
     };
   });
 }
@@ -124,8 +129,39 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
+const TITLE_STOPWORDS = new Set([
+  "alla",
+  "blev",
+  "blir",
+  "efter",
+  "eller",
+  "enligt",
+  "fran",
+  "från",
+  "inte",
+  "med",
+  "mot",
+  "nya",
+  "och",
+  "over",
+  "över",
+  "sade",
+  "sager",
+  "säger",
+  "ska",
+  "som",
+  "till",
+  "under",
+  "utan",
+  "vill",
+]);
+
 function tokenSet(title: string): Set<string> {
-  return new Set(normalizeTitle(title).split(" ").filter((w) => w.length > 3));
+  return new Set(
+    normalizeTitle(title)
+      .split(" ")
+      .filter((w) => w.length > 3 && !TITLE_STOPWORDS.has(w))
+  );
 }
 
 // Jaccard-likhet mellan två rubrikers ordmängder.
@@ -136,15 +172,86 @@ function similarity(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
-// Slår ihop nyheter som handlar om samma sak (mycket lika rubriker).
-function dedupe(items: NewsItem[]): NewsItem[] {
-  const kept: { item: NewsItem; tokens: Set<string> }[] = [];
+function sharedTokenCount(a: Set<string>, b: Set<string>): number {
+  let count = 0;
+  for (const w of a) if (b.has(w)) count++;
+  return count;
+}
+
+function withinStoryWindow(a: NewsItem, b: NewsItem): boolean {
+  if (!a.publishedAt || !b.publishedAt) return true;
+  return Math.abs(a.publishedAt - b.publishedAt) <= 48 * 60 * 60 * 1000;
+}
+
+function sameStory(
+  kept: { item: NewsItem; tokens: Set<string> },
+  item: NewsItem,
+  tokens: Set<string>
+): boolean {
+  if (!withinStoryWindow(kept.item, item)) return false;
+
+  const score = similarity(kept.tokens, tokens);
+  if (score >= 0.6) return true;
+
+  return (
+    kept.item.category === item.category &&
+    score >= 0.42 &&
+    sharedTokenCount(kept.tokens, tokens) >= 3
+  );
+}
+
+function toRelatedItem(item: NewsItem): RelatedNewsItem {
+  return {
+    id: item.id,
+    title: item.title,
+    link: item.link,
+    sourceId: item.sourceId,
+    sourceName: item.sourceName,
+    sourceLabel: item.sourceLabel,
+    sourceColor: item.sourceColor,
+    publishedAt: item.publishedAt,
+  };
+}
+
+// Slår ihop nyheter som handlar om samma sak och behåller andra medier som länkar.
+function groupRelatedStories(items: NewsItem[]): NewsItem[] {
+  const kept: {
+    item: NewsItem;
+    tokens: Set<string>;
+    sourceIds: Set<string>;
+    links: Set<string>;
+  }[] = [];
+
   for (const item of items) {
     const tokens = tokenSet(item.title);
-    const dup = kept.find((k) => similarity(k.tokens, tokens) >= 0.6);
-    if (!dup) kept.push({ item, tokens });
+    const dup = kept.find((k) => sameStory(k, item, tokens));
+
+    if (!dup) {
+      kept.push({
+        item: { ...item, related: [] },
+        tokens,
+        sourceIds: new Set([item.sourceId]),
+        links: new Set([item.link]),
+      });
+      continue;
+    }
+
+    if (dup.links.has(item.link)) continue;
+    dup.links.add(item.link);
+
+    // Flera träffar från samma källa är oftast uppdateringar eller dubletter.
+    if (dup.sourceIds.has(item.sourceId)) continue;
+
+    dup.sourceIds.add(item.sourceId);
+    dup.item.related.push(toRelatedItem(item));
   }
-  return kept.map((k) => k.item);
+
+  return kept.map((k) => ({
+    ...k.item,
+    related: k.item.related.sort(
+      (a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0)
+    ),
+  }));
 }
 
 async function aggregate(): Promise<NewsResult> {
@@ -165,7 +272,7 @@ async function aggregate(): Promise<NewsResult> {
 
   // Sortera nyast först (saknad tid hamnar sist)
   items.sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
-  items = dedupe(items);
+  items = groupRelatedStories(items);
 
   return { items, fetchedAt: Date.now(), failedSources };
 }

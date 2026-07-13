@@ -191,13 +191,21 @@ body {
   color: var(--muted);
 }
 
+.kicker__coverage {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 /* ---- Toppnyhet ---- */
 .lead {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.lead__main {
   display: block;
   text-decoration: none;
   color: inherit;
-  padding: 22px 0;
-  border-bottom: 1px solid var(--line);
 }
 
 .lead__media {
@@ -217,7 +225,7 @@ body {
   transition: transform 0.3s ease;
 }
 
-.lead:hover .lead__media img {
+.lead__main:hover .lead__media img {
   transform: scale(1.03);
 }
 
@@ -229,7 +237,7 @@ body {
   letter-spacing: -0.5px;
 }
 
-.lead:hover .lead__title {
+.lead__main:hover .lead__title {
   color: var(--accent);
 }
 
@@ -249,11 +257,14 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.story a {
+.story__article {
+  padding: 18px 0;
+}
+
+.story__main {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  padding: 18px 0;
   text-decoration: none;
   color: inherit;
 }
@@ -286,7 +297,7 @@ body {
   font-weight: 700;
 }
 
-.story a:hover .story__title {
+.story__main:hover .story__title {
   color: var(--accent);
 }
 
@@ -298,6 +309,51 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.coverage {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.coverage__label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.coverage__link {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.coverage__link:hover {
+  border-color: var(--line-strong);
+  background: var(--hover);
+}
+
+.coverage__source {
+  display: block;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---- Visa fler ---- */
